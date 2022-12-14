@@ -25,7 +25,7 @@ import random
 import os
 
 #yml
-from omegaconf import DictConfig, ListConfig
+from omegaconf import DictConfig, ListConfig,OmegaConf
 import hydra
 
 import mlflow
@@ -185,6 +185,72 @@ def load_cifar10(transform, train:bool):
                         )
     return cifar10_dataset
 ##-------------------------
+
+##-----------------transformsを選択
+"""
+pattern
+0:標準
+1:画像を左右反転
+2:画像を垂直反転
+3:画像を回転
+4:ランダムクロップ
+"""
+def choose_transform(pattern = 0):
+    if pattern == 0:
+        train_transform = transforms.Compose([
+                                    # transforms.RandomHorizontalFlip(p=0.5), #画像を左右反転
+                                    # transforms.RandomVerticalFlip(p=0.5), #画像を垂直反転
+                                    # transforms.RandomRotation(degrees=30),#画像を回転
+                                    transforms.ToTensor(),
+                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                                    #transforms.RandomErasing(p=0.5, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=0) #画像を切り抜き
+        ])
+        return  train_transform
+    elif pattern == 1:
+        train_transform = transforms.Compose([
+                                    transforms.RandomHorizontalFlip(p=0.5), #画像を左右反転
+                                    # transforms.RandomVerticalFlip(p=0.5), #画像を垂直反転
+                                    # transforms.RandomRotation(degrees=30),#画像を回転
+                                    transforms.ToTensor(),
+                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                                    #transforms.RandomErasing(p=0.5, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=0) #画像を切り抜き
+        ])
+        return  train_transform
+    elif pattern == 2:
+        train_transform = transforms.Compose([
+                                    # transforms.RandomHorizontalFlip(p=0.5), #画像を左右反転
+                                    transforms.RandomVerticalFlip(p=0.5), #画像を垂直反転
+                                    # transforms.RandomRotation(degrees=30),#画像を回転
+                                    transforms.ToTensor(),
+                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                                    #transforms.RandomErasing(p=0.5, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=0) #画像を切り抜き
+        ])
+        return  train_transform
+    elif pattern == 3:
+        train_transform = transforms.Compose([
+                                    # transforms.RandomHorizontalFlip(p=0.5), #画像を左右反転
+                                    # transforms.RandomVerticalFlip(p=0.5), #画像を垂直反転
+                                    transforms.RandomRotation(degrees=30),#画像を回転
+                                    transforms.ToTensor(),
+                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                                    #transforms.RandomErasing(p=0.5, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=0) #画像を切り抜き
+        ])
+        return  train_transform
+
+    elif pattern == 4:
+        train_transform = transforms.Compose([
+                                    # transforms.RandomHorizontalFlip(p=0.5), #画像を左右反転
+                                    # transforms.RandomVerticalFlip(p=0.5), #画像を垂直反転
+                                    # transforms.RandomRotation(degrees=30),#画像を回転
+                                    transforms.ToTensor(),
+                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                                    transforms.RandomErasing(p=0.5, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=0) #画像を切り抜き
+        ])
+        return  train_transform
+
+
+    else:
+        raise ValueError("存在しないtransform")
 
 ##----------モデル関係
 # Convolution層、BatchNormalization層(option)、ReLU層をまとめたブロック
@@ -383,10 +449,10 @@ def main(cfg: DictConfig):
     #========== 実験を行うための前準備 ==========#
     #cfgはconfig.ymlをpythonのdict形式に変換したもの
     print("実験設定")
-    print(cfg)#config表示
+    print(OmegaConf.to_yaml(cfg))#config表示
 
     #MLflow Tracking を使用して実験過程、結果を記録するwriterを作成
-    EXPERIMENT_NAME = "b3_session_cnn" #mlflow uiの「Experiments」に表示される実験名
+    EXPERIMENT_NAME = cfg.name #mlflow uiの「Experiments」に表示される実験名
     writer = MlflowWriter(EXPERIMENT_NAME) #writerを作成しexperiment=実験を開始
     writer.log_params_from_omegaconf_dict(cfg)#cfgのハイパーパラメーターを一括でwriterで記録(mlflow ui　の Parameters)
 
@@ -401,14 +467,7 @@ def main(cfg: DictConfig):
 
     #========== 学習、検証用のデータを準備 ==========#
     #データ拡張
-    train_transform = transforms.Compose([
-                                # transforms.RandomHorizontalFlip(p=0.5),
-                                # transforms.RandomVerticalFlip(p=0.5),
-                                # transforms.RandomRotation(degrees=30),
-                                transforms.ToTensor(),
-                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-                                #transforms.RandomErasing(p=0.5, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=0)
-    ])
+    train_transform = choose_transform(**cfg.transform)
     test_transform = transforms.Compose([
                                 transforms.ToTensor(),
                                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
@@ -434,18 +493,20 @@ def main(cfg: DictConfig):
     # データローダーを作成
     train_loader = fix_seed_dataLoader(
         train_dataset,          # データセットを指定
-        batch_size=256,          # バッチサイズを指定
+        #batch_size=256,          # バッチサイズを指定
         shuffle=True,           # シャッフルの有無を指定
         drop_last=True,         # バッチサイズで割り切れないデータの使用の有無を指定
         pin_memory=True,        # 少しだけ高速化が期待できるおまじない
-        num_workers=2          # DataLoaderのプロセス数を指定
+        num_workers=4,          # DataLoaderのプロセス数を指定
+        **cfg.dataloader
     )
     valid_loader = fix_seed_dataLoader(
         valid_dataset,
-        batch_size=256,
+        #batch_size=256,
         shuffle=False,
         pin_memory=True,
-        num_workers=2
+        num_workers=4,
+        **cfg.dataloader
     ) 
 
 
@@ -504,9 +565,13 @@ def main(cfg: DictConfig):
         writer.log_metric_step('train_acc', train_acc,epoch)
         writer.log_metric_step('valid_loss', valid_loss,epoch)
         writer.log_metric_step('valid_acc', valid_acc,epoch)
-        
 
         print(f"| Train | Epoch   {epoch+1} |: train_loss:{train_loss:.3f}, train_acc:{train_acc*100:3.3f}% | valid_loss:{valid_loss:.5f}, valid_acc:{valid_acc*100:3.3f}%")
+
+        #過学習を起こしているなら次の10n回目で学習中断
+        if (valid_loss - train_loss) / valid_loss >= 0.5 and epoch%10 == 0 :
+            print("過学習なので停止")
+            break
 
     print('Finished Training\n')
     

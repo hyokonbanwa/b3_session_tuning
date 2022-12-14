@@ -11,3 +11,9 @@
 ### コマンド
 * python b3_session_cnn.py 
 * python b3_session_cnn.py --multirun epochs=3,5,7
+
+変更するもの
+1.transform
+2.dataloader.batchsize
+3.model.encdim
+4.optimizer.lr
