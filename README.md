@@ -11,6 +11,7 @@
 ### コマンド
 * python b3_session_cnn.py 
 * python b3_session_cnn.py --multirun epochs=3,5,7
+* bash b3_session.sh
 
 変更するもの
 1.transform

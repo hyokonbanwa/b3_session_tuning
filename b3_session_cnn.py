@@ -569,43 +569,44 @@ def main(cfg: DictConfig):
         print(f"| Train | Epoch   {epoch+1} |: train_loss:{train_loss:.3f}, train_acc:{train_acc*100:3.3f}% | valid_loss:{valid_loss:.5f}, valid_acc:{valid_acc*100:3.3f}%")
 
         #過学習を起こしているなら次の10n回目で学習中断
-        if (valid_loss - train_loss) / valid_loss >= 0.5 and epoch%10 == 0 :
+        if (valid_loss - train_loss) / valid_loss >= 0.5 and (epoch+1)%10 == 0 :
             print("過学習なので停止")
             break
 
     print('Finished Training\n')
     
 
-    # #========== テスト ==========#
-    # test_dataset = load_cifar10(transform=test_transform, train=False) #データセット作成
+    #========== テスト ==========#
+    test_dataset = load_cifar10(transform=test_transform, train=False) #データセット作成
 
-    # #データローダー作成
-    # test_loader = fix_seed_dataLoader(
-    #     test_dataset,
-    #     batch_size=256,
-    #     shuffle=False,
-    #     pin_memory=True,
-    #     num_workers=2,
-    # )
-    # print(f"test : {len(test_dataset):5.0f} [set]")
+    #データローダー作成
+    test_loader = fix_seed_dataLoader(
+        test_dataset,
+        #batch_size=256,
+        shuffle=False,
+        pin_memory=True,
+        num_workers=4,
+        **cfg.dataloader    
+    )
+    print(f"test : {len(test_dataset):5.0f} [set]")
 
-    # loop = tqdm(test_loader, unit='batch', desc='| Test | Epoch {:>3} |'.format(epoch+1)) #loop = test_loader
-    # test_metrics = test_model(loop,model,criterion,device)#テストデータで評価
+    loop = tqdm(test_loader, unit='batch', desc='| Test | Epoch {:>3} |'.format(epoch+1)) #loop = test_loader
+    test_metrics = test_model(loop,model,criterion,device)#テストデータで評価
 
-    # #テスト結果を取り出し
-    # test_loss = test_metrics['test_loss']
-    # test_acc = test_metrics['test_acc']
+    #テスト結果を取り出し
+    test_loss = test_metrics['test_loss']
+    test_acc = test_metrics['test_acc']
 
-    # print("テストデータに対する結果")
-    # test_loss_str = f"test_loss   ：{test_loss:3.5f}"
-    # print(test_loss_str)
-    # test_acc_str = f"test_acc    ：{test_acc*100:2.3f}%"
-    # print(test_acc_str)
+    print("テストデータに対する結果")
+    test_loss_str = f"test_loss   ：{test_loss:3.5f}"
+    print(test_loss_str)
+    test_acc_str = f"test_acc    ：{test_acc*100:2.3f}%"
+    print(test_acc_str)
 
-    # #writerでテスト結果を保存
-    # #log_metric関数は単一の評価指標を記録するのに使用
-    # writer.log_metric('test_loss', test_loss) #引数：　評価指標の名前,値
-    # writer.log_metric('test_acc', test_acc)
+    #writerでテスト結果を保存
+    #log_metric関数は単一の評価指標を記録するのに使用
+    writer.log_metric('test_loss', test_loss) #引数：　評価指標の名前,値
+    writer.log_metric('test_acc', test_acc)
 
     writer.set_terminated()#一つのexperimentまたはrunを終えるときは必ず呼び出す
 

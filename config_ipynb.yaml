@@ -1,0 +1,17 @@
+name: "ipynb"
+seed: 42
+epochs: 10
+
+transform:
+  pattern: 0
+
+dataloader:
+  batch_size: 256
+
+model:
+  enc_dim: 128
+
+optimizer:
+  lr: 0.01
+
+
