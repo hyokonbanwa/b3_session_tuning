@@ -1,2 +1,5 @@
 data
 log
+outputs
+mlruns
+multirun

@@ -1,0 +1,9 @@
+seed: 42
+epochs: 3
+model:
+  enc_dim: 128
+
+optimizer:
+  lr: 0.01
+
+
